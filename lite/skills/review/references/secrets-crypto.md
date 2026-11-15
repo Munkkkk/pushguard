@@ -67,7 +67,7 @@ A secret can be absent from the repository and still leak:
 - Docker: `ARG`/`ENV` secrets and `COPY .env` persist in image layers. Use build secrets.
 - CI: secrets echoed in logs, exposed to workflows triggered by forks, or written into
   artifacts and caches. See `supply-chain-infra.md`.
-- Default fallbacks: `process.env.JWT_SECRET || 'dev-secret'` means production silently runs
+- Default fallbacks: `process.env.X || 'dev-secret'` means production silently runs
   on a known secret when the variable is missing. The code should fail to start instead.
 
 ## 4. Password storage
