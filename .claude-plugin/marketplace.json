@@ -1,5 +1,6 @@
 {
   "name": "pushguard",
+  "description": "Pushguard: a security gate for git push in Claude Code.",
   "owner": {
     "name": "Munkkkk"
   },
