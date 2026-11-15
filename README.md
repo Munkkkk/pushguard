@@ -5,6 +5,11 @@ A security gate for `git push`, for [Claude Code](https://claude.com/claude-code
 When Claude is about to push, Pushguard stops the push, makes Claude review the outgoing
 commits for security problems, and only lets the push through once the review passes.
 
+![Pushguard blocking a push and reporting a SQL injection and an IDOR](assets/demo.svg)
+
+<sub>Abridged and translated from a real session on a test repository. The IDOR is a missing
+ownership check: no pattern scanner can see it.</sub>
+
 ```
 you: "push this"
   -> Claude runs git push

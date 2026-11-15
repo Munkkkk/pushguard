@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 560" width="860" height="560" role="img" aria-label="Pushguard blocking a push and reporting two vulnerabilities">
+  <style>
+    text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size: 14px; fill: #cbd5e1; }
+    .dim { fill: #64748b; }
+    .user { fill: #f8fafc; font-weight: 700; }
+    .red { fill: #f87171; font-weight: 700; }
+    .amber { fill: #fbbf24; font-weight: 700; }
+    .green { fill: #34d399; }
+    .head { fill: #f8fafc; font-weight: 700; font-size: 15px; }
+    .path { fill: #7dd3fc; }
+  </style>
+  <rect width="860" height="560" rx="12" fill="#0f172a"/>
+  <rect width="860" height="36" rx="12" fill="#1e293b"/>
+  <rect y="24" width="860" height="12" fill="#1e293b"/>
+  <circle cx="22" cy="18" r="6" fill="#f87171"/>
+  <circle cx="42" cy="18" r="6" fill="#fbbf24"/>
+  <circle cx="62" cy="18" r="6" fill="#34d399"/>
+  <text x="430" y="23" text-anchor="middle" class="dim">claude: shop-api</text>
+
+  <text x="24" y="70"><tspan class="dim">&gt; </tspan><tspan class="user">push my commits</tspan></text>
+
+  <text x="24" y="104" class="dim">● Bash(git push origin main)</text>
+  <text x="40" y="126"><tspan class="red">pushguard: push blocked:</tspan> commit 37befb7 has not passed a security review yet.</text>
+  <text x="24" y="154" class="dim">● Skill(pushguard:review)   scope → scan → review → verify</text>
+
+  <text x="24" y="196" class="head">Pushguard: <tspan class="red">BLOCK</tspan>, nothing was pushed</text>
+  <text x="24" y="220" class="dim">main → origin/main, 1 commit, 1 file, +8/-0</text>
+
+  <text x="24" y="258"><tspan class="red">1. [CRITICAL]</tspan> <tspan class="user">SQL injection without authentication</tspan> <tspan class="dim">(confirmed)</tspan></text>
+  <text x="40" y="282"><tspan class="dim">Where </tspan> <tspan class="path">src/routes/orders.js:12</tspan></text>
+  <text x="40" y="304"><tspan class="dim">What  </tspan> req.query.status is concatenated into the query; the route has no requireUser</text>
+  <text x="40" y="326"><tspan class="dim">Attack</tspan> anyone, without an account, reads every customer's orders</text>
+  <text x="40" y="348"><tspan class="dim">Fix   </tspan> <tspan class="green">parameterize the query, add requireUser, filter on user_id</tspan></text>
+
+  <text x="24" y="390"><tspan class="amber">2. [HIGH]</tspan> <tspan class="user">IDOR on the order detail route</tspan> <tspan class="dim">(confirmed)</tspan></text>
+  <text x="40" y="414"><tspan class="dim">Where </tspan> <tspan class="path">src/routes/orders.js:9</tspan></text>
+  <text x="40" y="436"><tspan class="dim">What  </tspan> the query filters on id but never checks the order belongs to the caller</text>
+  <text x="40" y="458"><tspan class="dim">Attack</tspan> a logged-in user walks /orders/1, /orders/2... and reads other customers' orders</text>
+  <text x="40" y="480"><tspan class="dim">Fix   </tspan> <tspan class="green">WHERE id = $1 AND user_id = $2, return 404 when no row matches</tspan></text>
+
+  <text x="24" y="524" class="dim">Reviewed and clean: no secret or sensitive file in the outgoing commit.</text>
+</svg>
