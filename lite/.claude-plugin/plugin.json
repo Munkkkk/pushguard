@@ -1,0 +1,13 @@
+{
+  "name": "pushguard-lite",
+  "displayName": "Pushguard Lite",
+  "version": "0.1.0",
+  "description": "Security review of the commits you are about to push: secrets, auth, injection, XSS, CORS, RLS, supply chain, CI/CD and LLM risks. Instructions only, no hook and no script.",
+  "author": {
+    "name": "Munkkkk"
+  },
+  "homepage": "https://github.com/Munkkkk/pushguard#readme",
+  "repository": "https://github.com/Munkkkk/pushguard",
+  "license": "MIT",
+  "keywords": ["security", "code-review", "pre-push", "secrets", "owasp", "xss", "cors", "auth"]
+}

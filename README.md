@@ -51,6 +51,17 @@ git pre-push hook that blocks secrets.
 Requirements: git and bash (on Windows, Git Bash, which ships with Git for Windows).
 No other dependency.
 
+### Lite edition
+
+`lite/` holds **Pushguard Lite**: the review skill and its references only, in plain
+Markdown, with no hook and no script. It is the edition listed in Anthropic's plugin
+directory, which does not accept hooks or scripts from unverified publishers. It reviews on
+request and cannot block a push by itself. Install one edition or the other, not both:
+
+```
+/plugin install pushguard-lite@pushguard
+```
+
 ## Use
 
 - **Automatic**: ask Claude to push. The gate does the rest.

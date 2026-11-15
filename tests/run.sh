@@ -163,6 +163,32 @@ echo "exit 0" > "$(git rev-parse --git-path hooks)/pre-push.other"
 bash "$S/install-git-hook.sh" --remove >/dev/null 2>&1
 if [ -f "$(git rev-parse --git-path hooks)/pre-push" ]; then bad "--remove deletes the hook"; else ok "--remove deletes the hook"; fi
 
+echo "lite edition (the folder submitted to the plugin directory)"
+L="$ROOT/lite"
+same=1
+for f in "$ROOT"/skills/review/references/*.md; do
+  cmp -s "$f" "$L/skills/review/references/$(basename "$f")" || { same=0; bad "lite reference out of sync: $(basename "$f")"; }
+done
+[ "$same" = 1 ] && ok "lite references match the full edition"
+if cmp -s "$ROOT/agents/auditor.md" "$L/agents/auditor.md"; then ok "lite auditor agent matches"; else bad "lite auditor agent out of sync"; fi
+odd=$(cd "$L" && find . -type f | grep -E -v '\.(md|json|png)$|^\./LICENSE$')
+eq "lite holds only Markdown, JSON, PNG and the licence" "" "$odd"
+shebang=$(cd "$L" && grep -rl '^#!' . 2>/dev/null)
+eq "lite has no file starting with a shebang" "" "$shebang"
+if [ -e "$L/hooks" ] || [ -e "$L/scripts" ] || [ -e "$L/bin" ]; then bad "lite ships no hook, script or bin"; else ok "lite ships no hook, script or bin"; fi
+new_repo litescan
+echo "k=\"$AWS\"" > conf.js; commit "leak"; git rm -q conf.js; commit "remove"
+n=0
+grep '^git log RANGE' "$L/skills/review/references/secret-patterns.md" > "$T/lite.cmds"
+while IFS= read -r line; do
+  n=$((n + 1))
+  out=$(eval "${line/RANGE/origin/main..HEAD}" 2>"$T/lite.err"); rc=$?
+  eq "lite search command $n runs" 0 "$rc"
+  [ "$n" = 1 ] && has "lite search finds a key deleted by a later commit" "conf.js" "$out"
+  [ "$n" = 1 ] && lacks "lite search does not print the value" "$AWS" "$out"
+done < "$T/lite.cmds"
+eq "lite documents five search commands" 5 "$n"
+
 echo
 echo "$PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
