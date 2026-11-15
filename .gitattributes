@@ -1,5 +1,4 @@
-# Shell scripts and pattern files must keep LF endings, or bash breaks on Windows checkouts.
-*.sh   text eol=lf
-*.rules text eol=lf
-*.json text eol=lf
-*.md   text eol=lf
+# Shell scripts and rule files are committed with LF endings and must never be converted:
+# bash cannot run a script with CRLF line endings (Windows checkouts with core.autocrlf).
+*.sh    -text
+*.rules -text

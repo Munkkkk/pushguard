@@ -73,6 +73,23 @@ only the commits added since the last approval are examined.
 | `agents/auditor.md` | Read-only subagent, one per area, for large diffs and full audits. |
 | `skills/setup` + `scripts/git-pre-push.sh` | Optional native git hook for pushes outside Claude Code. |
 
+## What it runs on your machine
+
+Everything the plugin does, so you can decide whether to trust it:
+
+- **A hook on every Bash and PowerShell tool call** (`scripts/gate.sh`). It reads the command
+  Claude is about to run. If the command is not a `git push`, it exits immediately. If it
+  is, it runs read-only `git` commands in your repository to decide whether to block.
+- **Scripts the review skill asks Claude to run**: `scope.sh`, `scan.sh` and `approve.sh`.
+  They run `git`, `grep`, `awk` and `sed` on your repository.
+- **Files it writes**: approval markers in `.git/pushguard/` (never committed, never pushed)
+  and, only if you install the native hook, `.git/hooks/pre-push` plus a copy of the scanner
+  in `.git/pushguard/bin/`. It writes nothing in your working tree.
+- **Network**: none. No telemetry, no download, no request to any server. Your code leaves
+  the machine only the way it already does when Claude reads it.
+- **Permissions**: it does not change Claude Code settings or permission rules.
+- **Dependencies**: git and bash. No package is installed.
+
 ## Configure
 
 - `.pushguardignore`: globs the secret scan skips (test fixtures with fake keys).
