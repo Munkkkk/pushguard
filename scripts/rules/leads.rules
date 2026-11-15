@@ -1,0 +1,64 @@
+# pushguard lead rules: risky constructs worth a human-grade look. A match is NOT a finding.
+# Format (whitespace separated): id  reference  flags  regex  description...
+#   reference: the references/<name>.md file that explains how to judge the match
+#   flags: i = case-insensitive, - = none
+#   regex: POSIX ERE (grep -E). It must not contain a space or tab: use [[:space:]].
+
+# --- web client
+dom-xss-sink        web-client  -  (\.(innerHTML|outerHTML)[[:space:]]*\+?=|insertAdjacentHTML|document\.write(ln)?\(|dangerouslySetInnerHTML|v-html=|\{@html|bypassSecurityTrust|\[innerHTML\]|srcdoc)   HTML sink: is the value attacker-influenced and unsanitized?
+template-unescaped  web-client  -  (\|[[:space:]]*safe|mark_safe\(|\.html_safe|[^a-z]raw\(|\{\{\{|<%-|Markup\(|render_template_string|\{!![[:space:]]|autoescape[[:space:]]*(=|:)?[[:space:]]*(false|off))   Template output with escaping disabled
+cors-config         web-client  i  (Access-Control-Allow-(Origin|Credentials)|[^a-z]cors\(|allow_origins|allow_origin_regex|CORS_ALLOW|CORS_ORIGIN|AllowAllOrigins|AllowOrigins|origin:[[:space:]]*(true|["']\*))   CORS configuration changed: wildcard, reflected origin or credentials?
+cookie-flags        web-client  i  (httpOnly[[:space:]]*:[[:space:]]*false|secure[[:space:]]*:[[:space:]]*false|sameSite[[:space:]]*:[[:space:]]*["']?none|SESSION_COOKIE_(SECURE|HTTPONLY)[[:space:]]*=[[:space:]]*False|CSRF_COOKIE_SECURE[[:space:]]*=[[:space:]]*False)   Weakened cookie flags
+token-in-storage    web-client  i  (localStorage|sessionStorage)\.setItem\(.*(token|jwt|session|secret|password)   Credential stored in web storage (readable by any XSS)
+postmessage         web-client  -  (addEventListener\(["']message|postMessage\(.*["']\*["'])   postMessage: origin checked on receive? wildcard target on send?
+open-redirect       web-client  i  (redirect|location\.(href|assign|replace)|window\.location|router\.(push|replace))[[:space:]]*[(=].*(req\.|query|searchParams|params|returnUrl|return_to|callbackUrl|redirect_?(to|uri|url)|[^a-z]next[^a-z])   Redirect target derived from request data
+csrf-disabled       web-client  i  (csrf_exempt|csrf[[:space:]]*:[[:space:]]*false|disable.{0,10}csrf|csrf.{0,10}disable|skip_before_action[[:space:]]*:verify_authenticity_token|protect_from_forgery.*except)   CSRF protection disabled
+security-headers    web-client  i  (Content-Security-Policy|unsafe-inline|unsafe-eval|X-Frame-Options|frame-ancestors|helmet\(|Strict-Transport-Security)   Security header / CSP touched
+
+# --- injection
+code-eval           injection   -  ((^|[^[:alnum:]_.])eval[[:space:]]*\(|new[[:space:]]Function[[:space:]]*\(|setTimeout\([[:space:]]*["'`]|vm\.runIn|[^[:alnum:]_]exec\([[:space:]]*(compile|request|input)|__import__\()   Dynamic code evaluation
+command-exec        injection   -  (child_process|execSync\(|execFile(Sync)?\(|spawn(Sync)?\(|os\.system\(|os\.popen\(|subprocess\.(run|call|Popen|check_output|getoutput)|shell[[:space:]]*=[[:space:]]*True|Runtime\.getRuntime|ProcessBuilder|shell_exec\(|passthru\(|proc_open\(|exec\.Command\()   Process execution: can input reach the command or its arguments?
+sql-string-build    injection   i  ((select|insert[[:space:]]+into|update|delete[[:space:]]+from)[[:space:]].*(\$\{|["'`][[:space:]]*\+|\+[[:space:]]*["'`]|%s|\.format\(|[^a-z]f["'])|queryRawUnsafe|executeRawUnsafe|sequelize\.query\(|knex\.raw\(|\.raw\(|\.extra\(|RawSQL\(|createQuery\(.*\+|text\(f["'])   SQL built from strings or a raw-query escape hatch
+nosql-operator      injection   -  (\$where|find(One)?\([[:space:]]*req\.(body|query)|\.find\(\{[^}]*req\.(body|query|params)\.[a-zA-Z_]+[[:space:]]*\})   NoSQL query fed directly from the request (operator injection)
+path-from-input     injection   -  ((readFile|createReadStream|createWriteStream|sendFile|writeFile|unlink|rm|readdir|open|download)(Sync)?\(.*(req\.|params|query|body|searchParams|input|filename|fileName)|path\.(join|resolve)\(.*(req\.|params|query|body)|send_file\(|send_from_directory\()   File path derived from input (traversal)
+ssrf-fetch          injection   -  ((fetch|axios(\.[a-z]+)?|got(\.[a-z]+)?|request|urlopen|requests\.(get|post|put|request)|httpx\.(get|post)|http\.(Get|Post)|curl_init)\(.*(req\.|params|query|body|searchParams|input|[^a-zA-Z]url[^a-zA-Z])|redirect:[[:space:]]*["']follow)   Outbound request to a URL that may be user-controlled (SSRF)
+deserialization     injection   -  (pickle\.loads?\(|cPickle|yaml\.load\(|yaml\.unsafe_load|unserialize\(|Marshal\.load|ObjectInputStream|readObject\(|node-serialize|jsonpickle|TypeNameHandling|BinaryFormatter)   Unsafe deserialization
+xml-external-entity injection   -  (noent[[:space:]]*:[[:space:]]*true|resolve_entities[[:space:]]*=[[:space:]]*True|LIBXML_NOENT|DocumentBuilderFactory|XMLInputFactory|SAXParserFactory|etree\.(parse|fromstring)\()   XML parsing: external entities disabled?
+prototype-pollution injection   -  (__proto__|constructor\.prototype|Object\.assign\([^,]+,[[:space:]]*req\.|(merge|defaultsDeep|extend)\(.*req\.(body|query))   Prototype pollution vector
+regex-from-input    injection   -  new[[:space:]]RegExp\(.*(req\.|params|query|body|input|search)   Regex compiled from input (ReDoS / injection)
+
+# --- auth and access control
+jwt-unsafe          auth-access i  (algorithms?["']?[[:space:]]*[:=].*none|jwt\.decode\(|jwtDecode\(|ignoreExpiration|verify_signature.{0,6}False|verify[[:space:]]*=[[:space:]]*False.*jwt|decode\(.*verify[[:space:]]*=[[:space:]]*False)   JWT decoded without verification or with a weak algorithm policy
+auth-bypass-marker  auth-access i  ((todo|fixme|hack|xxx|temp).{0,40}(auth|security|permission|validat|sanitiz|csrf|token|rls)|(skip|disable|bypass|no)_?(auth|authz|verification|validation|permission)|isAdmin[[:space:]]*=[[:space:]]*true|role[[:space:]]*===?[[:space:]]*["']admin["'][[:space:]]*\|\|[[:space:]]*true)   Auth shortcut or unfinished security work
+mass-assignment     auth-access -  (\.(create|update|insert|upsert|updateOne|updateMany|findOneAndUpdate|findByIdAndUpdate|set|merge)\(.*(req\.body|request\.(json|data|POST)|\.\.\.(body|data|input|payload|values))|params\.permit!|fields[[:space:]]*=[[:space:]]*["']__all__|\$guarded[[:space:]]*=[[:space:]]*\[\])   Whole request body written to a record (mass assignment)
+user-id-from-client auth-access i  ((user_?id|owner_?id|tenant_?id|org_?id|account_?id|role)["']?[[:space:]]*[:=][[:space:]]*(req\.(body|query|params)|body\.|params\.|searchParams\.get|formData\.get|input\.))   Identity or role taken from the client instead of the session
+supabase-privileged auth-access -  (service_role|SERVICE_ROLE|auth\.admin\.|SUPABASE_SECRET|supabaseAdmin|createServiceClient|adminClient)   Privileged Supabase client: server-only, and behind an authorization check?
+sql-rls-policy      auth-access i  (disable[[:space:]]+row[[:space:]]+level[[:space:]]+security|(using|with[[:space:]]+check)[[:space:]]*\([[:space:]]*true[[:space:]]*\)|security[[:space:]]+definer|grant[[:space:]]+all|create[[:space:]]+policy|create[[:space:]]+table|to[[:space:]]+anon|to[[:space:]]+public)   Schema / RLS / grant change: is every new table protected by RLS and scoped policies?
+firebase-rules      auth-access -  (allow[[:space:]]+(read|write|create|update|delete)[^;]*:[[:space:]]*if[[:space:]]+true|"\.(read|write)"[[:space:]]*:[[:space:]]*(true|"true"))   Open Firebase rule
+
+# --- secrets and crypto
+public-env-secret   secrets-crypto -  (NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|PUBLIC|NUXT_PUBLIC|GATSBY)_[A-Z0-9_]*(SECRET|PRIVATE|SERVICE_ROLE|PASSWORD|TOKEN|ADMIN)   Secret-looking variable exposed to the browser bundle by its prefix
+tls-verify-off      secrets-crypto -  (verify[[:space:]]*=[[:space:]]*False|rejectUnauthorized[[:space:]]*:[[:space:]]*false|NODE_TLS_REJECT_UNAUTHORIZED|InsecureSkipVerify[[:space:]]*:[[:space:]]*true|CURLOPT_SSL_VERIFY(PEER|HOST)|check_hostname[[:space:]]*=[[:space:]]*False|ssl[[:space:]]*:[[:space:]]*false|sslmode=disable)   TLS verification disabled
+weak-crypto         secrets-crypto -  (createHash\(["'](md5|sha1)["']|hashlib\.(md5|sha1)\(|[^[:alnum:]_](md5|sha1)\(|MessageDigest\.getInstance\("(MD5|SHA-?1)"|createCipher\(|MODE_ECB|[-/_]ECB|DES\.new|RC4|pbkdf2.{0,40}[^0-9][0-9]{1,4}[,)])   Weak hash / cipher / KDF settings
+weak-random         secrets-crypto -  (Math\.random\(\)|random\.(random|randint|choice|randrange)\(|rand\(\)|mt_rand\(|uniqid\().*   Non-cryptographic randomness: is it used for a token, id, code or password?
+timing-compare      secrets-crypto i  ((signature|hmac|digest|token|secret|api_?key|hash)[a-z0-9_.]*[[:space:]]*(===?|!==?)[[:space:]]*[a-z_]|(===?|!==?)[[:space:]]*[a-z_.]*(signature|hmac|digest))   Secret compared with == (timing side channel; use a constant-time compare)
+plaintext-password  secrets-crypto i  (password[[:space:]]*===?[[:space:]]*[a-z_.]+\.password|password:[[:space:]]*(req\.body|body|input|data)\.password[[:space:]]*[,}])   Password compared or stored without hashing
+
+# --- api and data handling
+file-upload         api-data    -  (multer|formidable|busboy|UploadFile|\$_FILES|move_uploaded_file|createSignedUploadUrl|\.upload\(|request\.FILES|IFormFile|MultipartFile)   File upload: type, size, name, storage location and access control?
+webhook-handler     api-data    i  (webhook|x-hub-signature|stripe-signature|svix-|constructEvent)   Webhook handler: signature verified on the raw body before any side effect?
+debug-enabled       api-data    -  (DEBUG[[:space:]]*=[[:space:]]*True|debug[[:space:]]*=[[:space:]]*True|ALLOWED_HOSTS[[:space:]]*=[[:space:]]*\[["']\*|app\.debug[[:space:]]*=|FLASK_DEBUG|display_errors[[:space:]]*=[[:space:]]*(On|1)|introspection:[[:space:]]*true|playground:[[:space:]]*true|productionBrowserSourceMaps:[[:space:]]*true)   Debug / introspection switched on
+error-leak          api-data    -  (res\.(send|json)\(.*(err|error)(\.stack|\.message)?[[:space:]]*[,)}]|traceback\.format_exc\(\)|printStackTrace\(\)|return.*str\(e\)|detail=str\(e\))   Internal error detail returned to the client
+log-sensitive       api-data    i  (console\.(log|info|debug|error)|logger?\.[a-z]+|print|println|logging\.[a-z]+)\(.*(password|passwd|secret|token|authorization|cookie|credit|card|ssn|api_?key)   Sensitive value written to logs
+bind-all-interfaces api-data    -  (0\.0\.0\.0|host[[:space:]]*[:=][[:space:]]*["']::["'])   Service bound to all interfaces
+
+# --- supply chain and infrastructure
+gha-untrusted       supply-chain-infra -  (pull_request_target|workflow_run|\$\{\{[[:space:]]*github\.(event\.(issue|pull_request|comment|review|head_commit|discussion|pages)|head_ref)[^}]*\}\}|permissions:[[:space:]]*write-all|secrets:[[:space:]]*inherit|ACTIONS_ALLOW_UNSECURE)   GitHub Actions: untrusted input in a script, or over-broad permissions
+gha-unpinned        supply-chain-infra -  uses:[[:space:]]*[^@[:space:]]+@(main|master|latest|v?[0-9]+(\.[0-9]+)*)[[:space:]]*(#.*)?$   Third-party action referenced by a mutable tag instead of a commit SHA
+pipe-to-shell       supply-chain-infra -  ((curl|wget)[[:space:]].*\|[[:space:]]*(sudo[[:space:]]+)?(ba|z)?sh|iwr[[:space:]].*\|[[:space:]]*iex|Invoke-Expression)   Remote script piped into a shell
+container-risk      supply-chain-infra -  (USER[[:space:]]+root|--privileged|privileged:[[:space:]]*true|chmod[[:space:]]+(-R[[:space:]]+)?777|ADD[[:space:]]+https?://|FROM[[:space:]]+[^[:space:]]+:latest|hostNetwork:[[:space:]]*true|allowPrivilegeEscalation:[[:space:]]*true|/var/run/docker\.sock|--no-check-certificate)   Container / orchestration hardening regression
+iac-public          supply-chain-infra -  (0\.0\.0\.0/0|::/0|acl[[:space:]]*=[[:space:]]*"public-read|publicly_accessible[[:space:]]*=[[:space:]]*true|"Principal"[[:space:]]*:[[:space:]]*"\*"|"Action"[[:space:]]*:[[:space:]]*"\*"|block_public_acls[[:space:]]*=[[:space:]]*false|encrypted[[:space:]]*=[[:space:]]*false)   Infrastructure opened to the world or left unencrypted
+dep-install-source  supply-chain-infra -  ("[^"]+"[[:space:]]*:[[:space:]]*"(git\+|https?://|github:|file:)|--extra-index-url|--index-url|--trusted-host|"(pre|post)?install"[[:space:]]*:|registry[[:space:]]*=|ignore-scripts[[:space:]]*=[[:space:]]*false)   Dependency from a non-registry source, a custom registry, or an install script
+
+# --- AI / LLM
+llm-risk            ai-llm      -  (dangerouslyAllowBrowser|allowDangerous|bypassPermissions|dangerously-skip-permissions|(system|instructions|prompt)["']?[[:space:]]*[:=].*(\$\{|\+[[:space:]]*(req|input|user|body)|\.format\(|f["']))   LLM call: key exposed to the browser, or untrusted text spliced into instructions

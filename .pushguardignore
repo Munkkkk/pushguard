@@ -1,0 +1,3 @@
+# The rule files and the security references describe secrets and vulnerable code on purpose.
+scripts/rules/
+skills/review/references/

@@ -1,0 +1,13 @@
+{
+  "name": "pushguard",
+  "owner": {
+    "name": "Munkkkk"
+  },
+  "plugins": [
+    {
+      "name": "pushguard",
+      "source": "./",
+      "description": "Security gate for git push: blocks the push until the outgoing commits pass a deep security review."
+    }
+  ]
+}

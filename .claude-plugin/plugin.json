@@ -1,0 +1,12 @@
+{
+  "name": "pushguard",
+  "displayName": "Pushguard",
+  "version": "0.1.0",
+  "description": "Security gate for git push: blocks the push until the outgoing commits pass a deep security review (secrets, auth, injection, XSS, CORS, supply chain, CI/CD, RLS, LLM risks).",
+  "author": {
+    "name": "Munkkkk"
+  },
+  "repository": "https://github.com/Munkkkk/pushguard",
+  "license": "MIT",
+  "keywords": ["security", "code-review", "pre-push", "secrets", "owasp", "xss", "cors", "auth"]
+}
