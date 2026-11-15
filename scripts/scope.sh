@@ -66,6 +66,7 @@ elif [ -n "$LAST" ] && [ "$(git rev-list --count "$LAST..HEAD")" -lt "$COMMITS" 
   echo "approved:  $LAST (earlier commits already reviewed: review only what came after)"
 fi
 echo "review:    git diff $REVIEW_FROM HEAD"
+pg_docs_only && echo "fastpath:  only documentation and images changed: no code review needed, the secret scan is enough"
 
 echo
 echo "--- outgoing commits"

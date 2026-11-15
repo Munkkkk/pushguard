@@ -30,6 +30,9 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/scope.sh"
 ```
 
 - `nothing to push` or `HEAD already passed`: say so in one line and stop.
+- A `fastpath:` line means the outgoing commits only touch prose and images. Run the scan
+  (step 2); if it is clean, approve with `--verdict PASS --summary "documentation only"` and
+  report in two lines. Skip steps 3 to 6: a deep review of a README costs time and finds nothing.
 - Uncommitted changes are not part of a push. Mention them, do not review them, unless the
   user asked for a review of work in progress.
 - If the scripts are unavailable (skill installed without the plugin, or no bash), do the same
@@ -150,11 +153,16 @@ code and running the project's own tests locally is the limit.
 | MEDIUM | Real weakness that needs further conditions, or limited impact | no rate limit on login or OTP, reflected XSS behind a strict CSP, weak hash for non-password data, verbose errors, unpinned third-party action |
 | LOW | Hardening | missing header where no concrete attack exists, minor information exposure |
 
-Verdict:
+Verdict. The blocking threshold configured for this installation is: `${user_config.block_level}`
+(one of `critical`, `high`, `medium`; if the value above is anything else, including an
+unsubstituted placeholder, use `high`).
 
-- **BLOCK**: at least one CRITICAL or HIGH that is `confirmed` or `likely`.
-- **WARN**: MEDIUM findings at most.
+- **BLOCK**: at least one `confirmed` or `likely` finding at or above the threshold
+  (`high`: CRITICAL or HIGH; `critical`: CRITICAL only; `medium`: MEDIUM and up).
+- **WARN**: findings above LOW remain, all below the threshold.
 - **PASS**: nothing above LOW.
+
+A secret in the outgoing commits blocks at every threshold.
 
 ## 7. Report
 

@@ -7,6 +7,7 @@
 # and gives the reviewer a reason to run. Escape hatches, for the human to decide on:
 #   PUSHGUARD_SKIP=1 git push ...   skip once
 #   PUSHGUARD_DISABLE=1             environment variable, disables the gate entirely
+#   PUSHGUARD_NO_FASTPATH=1         environment variable, review documentation-only pushes too
 
 [ "${PUSHGUARD_DISABLE:-}" = 1 ] && exit 0
 
@@ -88,6 +89,20 @@ case $common in /*|[A-Za-z]:*) ;; *) common="$dir/$common" ;; esac
 # Nothing new to publish (already on the upstream, e.g. pushing a tag or re-pushing).
 if up=$(git -C "$dir" rev-parse -q --verify '@{upstream}^{commit}' 2>/dev/null); then
   [ "$(git -C "$dir" rev-list --count "$up..$head" 2>/dev/null)" = 0 ] && exit 0
+fi
+
+# Fast path: a push that only touches prose and images does not need a code review.
+# approve.sh still runs the secret scan and refuses if it finds anything.
+if [ "${PUSHGUARD_NO_FASTPATH:-}" != 1 ]; then
+  HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+  if (
+    cd "$dir" && cd "$(git rev-parse --show-toplevel)" || exit 1
+    . "$HERE/lib.sh"
+    pg_range HEAD && pg_docs_only || exit 1
+    bash "$HERE/approve.sh" --verdict PASS --summary "auto: documentation only, secret scan clean" >/dev/null 2>&1
+  ); then
+    exit 0
+  fi
 fi
 
 deny "push blocked: commit ${head:0:8} has not passed a security review yet." \

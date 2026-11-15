@@ -73,6 +73,12 @@ only the commits added since the last approval are examined.
 - `.pushguardignore`: globs the secret scan skips (test fixtures with fake keys).
 - `// pushguard:ignore` on a line: silence that line.
 - `.pushguard.md`: your threat model and accepted risks. The reviewer reads it first.
+- **Blocking threshold**: asked when you enable the plugin, `high` by default (CRITICAL and
+  HIGH block). Set `medium` for a strict team, `critical` for a prototype. A secret always blocks.
+- **Documentation fast path**: a push that only touches prose and images (`.md`, `.txt`,
+  images, `LICENSE`...) passes on the secret scan alone, without a review. Agent instruction
+  files (`CLAUDE.md`, `AGENTS.md`, skills, `.claude/`, `.github/`) never take the fast path.
+  `PUSHGUARD_NO_FASTPATH=1` turns it off.
 - `PUSHGUARD_SKIP=1 git push`: skip the gate once. `PUSHGUARD_DISABLE=1`: disable it.
 - Add your own rules to `scripts/rules/secrets.rules` and `scripts/rules/leads.rules`.
 
@@ -95,6 +101,7 @@ only the commits added since the last approval are examined.
 claude --plugin-dir ./pushguard     # load the plugin from a local checkout
 claude plugin validate ./pushguard  # check the manifest
 bash scripts/scan.sh --all          # run the scanner on any repository
+bash tests/run.sh                   # test suite (also run by CI on Linux, macOS and Windows)
 ```
 
 ## License

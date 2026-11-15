@@ -76,6 +76,22 @@ pg_last_approved() {
   return 0
 }
 
+# True when every file touched by the outgoing commits (PG_LOG_ARGS, set by pg_range) is prose
+# or an image. Such a push needs the secret scan but not a code review.
+# Agent instruction files are excluded on purpose: a CLAUDE.md or a skill is executable intent.
+pg_docs_only() {
+  local files
+  files=$(git log --name-only --format= "${PG_LOG_ARGS[@]}" 2>/dev/null | sort -u | grep -v '^$')
+  [ -n "$files" ] || return 1
+  if printf '%s\n' "$files" | grep -E -i -v '\.(md|markdown|txt|rst|adoc|png|jpe?g|gif|webp|avif|ico|bmp)$|(^|/)(LICENSE|LICENCE|NOTICE|AUTHORS|CONTRIBUTORS|CHANGELOG)$' | grep -q .; then
+    return 1
+  fi
+  if printf '%s\n' "$files" | grep -E -i '(^|/)(CLAUDE|AGENTS|GEMINI|SKILL|copilot-instructions)\.md$|(^|/)\.(claude|cursor|github|codex|windsurf)/|(^|/)(skills|agents|commands|rules|prompts)/' | grep -q .; then
+    return 1
+  fi
+  return 0
+}
+
 # Pathspec excludes: generated files that only produce noise, plus the project's .pushguardignore.
 pg_excludes() {
   PG_EXCL=(

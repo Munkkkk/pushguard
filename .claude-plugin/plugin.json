@@ -8,5 +8,13 @@
   },
   "repository": "https://github.com/Munkkkk/pushguard",
   "license": "MIT",
+  "userConfig": {
+    "block_level": {
+      "type": "string",
+      "title": "Blocking threshold",
+      "description": "Lowest severity that blocks a push: critical, high or medium. Findings below it are reported as warnings.",
+      "default": "high"
+    }
+  },
   "keywords": ["security", "code-review", "pre-push", "secrets", "owasp", "xss", "cors", "auth"]
 }
